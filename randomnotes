@@ -1,0 +1,57 @@
+import ballerina/http;
+import ballerina/io;
+import ballerina/sql;
+import ballerinax/mysql;
+import ballerinax/mysql.driver as _;
+
+type Tweet record {|
+    string tweet;
+    string author;
+    int date;
+|};
+
+service / on new http:Listener(8080) {
+    private final mysql:Client db;
+
+
+    function init() returns error? {
+        self.db = check new (host = "localhost", port = 3306, user = "XXXXXX",
+                            password = "XXXXXXX", database = "XXXXXXX");
+        io:println("listening at 8080...");
+    }
+
+    resource function get testFunc1/[int numPointer]() returns Tweet|sql:Error {
+    
+        Tweet|sql:Error result = self.db->queryRow(`SELECT * FROM tweets WHERE id=${numPointer}`);
+        return result;
+    }
+
+    resource function post tweetFunc(string tweet, string author, int date) returns http:Created|http:NotAcceptable|error {
+        sql:ExecutionResult|sql:Error result = self.db->execute(`INSERT INTO tweets (tweet, author, date) VALUES (${tweet}, ${author}, ${date})`);
+
+        if (result is sql:Value) {
+            return http:CREATED;
+        } else {
+            return http:NOT_ACCEPTABLE;
+        }
+    }
+
+    //2nd 
+    resource function post tweetFunc2(@http:Payload Tweet tweet) returns http:Created|http:NotAcceptable|error {
+
+        //add some conditions to verify authenticity of tweet or if it contains security threat content before execution?
+        // some if statements here ?
+        
+        sql:ExecutionResult|sql:Error result = self.db->execute(`INSERT INTO tweets (tweet, author, date) VALUES (${tweet.tweet}, ${tweet.author}, ${tweet.date})`);
+
+        if (result is sql:Value) {
+            return http:CREATED;
+        } else {
+            return http:NOT_ACCEPTABLE;
+        }
+    }
+
+    //communications, hading string input, json. read RFC
+    //SQL injection, look for security stuff. 
+}
+
